@@ -3,7 +3,9 @@
   <head>
     <meta http-equiv="Content-type" content="text/html; charset=<% settings.charset %>" />
     <title>Atticus</title>
-    <link rel="stylesheet" href="<% request.uri_base %>/css/style.css" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" charset="utf-8"></script>      
+    </script>
   </head>
   <body>
     [% content %]
