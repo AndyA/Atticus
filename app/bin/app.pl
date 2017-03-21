@@ -1,4 +1,7 @@
 #!/usr/bin/env perl
+
 use Dancer;
-use Atticus;
+
+use Atticus::Site;
+
 dance;
