@@ -83,7 +83,12 @@ sub parse_mi {
       }
       push @{ $stash->{$type} }, clean_mi_track($rec);
     }
-    my $file_name = $stash->{general}[0]{completeName};
+
+    my $gen = delete $stash->{general};
+    next unless keys %$stash;
+
+    $stash->{general} = $gen->[0];
+    my $file_name = $gen->{completeName};
     $data->{$file_name} = $stash;
   }
 
