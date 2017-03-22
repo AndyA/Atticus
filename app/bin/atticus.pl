@@ -69,7 +69,7 @@ sub scan {
     my @update = ();
     my @scan   = ();
 
-    for my $kid (@all) {
+    for my $kid ( sort @all ) {
       my $lkid = $lkids->{$kid};
       my $rkid = $rkids->{$kid};
 
