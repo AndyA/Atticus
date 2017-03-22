@@ -24,9 +24,8 @@ sub make_uri {
 
 prefix '/store' => sub {
   get '/*/**' => sub {
-    my ( $host, $path ) = splat;
-    my $u = make_uri( $host, $path );
-    return { host => $host, path => $path, uri => "$u" };
+    my $uri = make_uri(splat);
+    return Atticus::Factory->store->get($uri);
   };
 
   put '/*/**' => sub {

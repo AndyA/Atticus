@@ -25,6 +25,12 @@ with qw(
 
 sub _b_store { shift->db->collection("store") }
 
+sub get {
+  my ( $self, $uri ) = @_;
+  
+  return {};
+}
+
 sub put {
   my ( $self, $uri, $md ) = @_;
   $self->_store->save( { _id => $uri, md => $md }, );
