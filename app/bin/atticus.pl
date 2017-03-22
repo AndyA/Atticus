@@ -88,7 +88,7 @@ sub parse_mi {
     next unless keys %$stash;
 
     $stash->{general} = $gen->[0];
-    my $file_name = $gen->{completeName};
+    my $file_name = $gen->[0]{completeName};
     $data->{$file_name} = $stash;
   }
 
