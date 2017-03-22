@@ -26,3 +26,9 @@ engines:
     end_tag:   '%]'
 
 serializer: JSON
+
+plugins:
+  MongoDB:
+    host: localhost
+    port: 27017
+    db_name: atticus
