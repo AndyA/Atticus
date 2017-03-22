@@ -6,6 +6,7 @@ use autodie;
 use strict;
 use warnings;
 
+use Fcntl ':mode';
 use Getopt::Long;
 use HTTP::Request;
 use JSON;
@@ -13,8 +14,11 @@ use LWP::UserAgent;
 use Path::Class;
 use Scalar::Util qw( looks_like_number );
 use Sys::Hostname;
+use URI;
 use URI::file;
 use XML::LibXML qw( :libxml );
+
+use constant CHUNK => 100;
 
 use constant USAGE => <<EOT;
 Syntax: $0 [options] <dir> ...
@@ -40,38 +44,165 @@ GetOptions(
 say USAGE and exit if $O{help};
 @ARGV or die USAGE;
 
-my $info = mediainfo(@ARGV);
-my $data = parse_mi($info);
-# print JSON->new->pretty->canonical->encode($data);
-
-my $ua = LWP::UserAgent->new;
-while ( my ( $file, $md ) = each %$data ) {
-  my $id = file_id( $O{node}, $file );
-  my $store_uri = URI->new( $O{store} );
-  my ( undef, @path ) = $id->path_segments;
-  $store_uri->path_segments( "store", $id->host, @path );
-  say $store_uri;
-  my $req = HTTP::Request->new(
-    PUT => $store_uri,
-    [Content_Type => "application/json"],
-    JSON->new->encode( { mediainfo => $md } )
-  );
-  my $resp = $ua->request($req);
-  die $resp->status_line unless $resp->is_success;
+for my $root (@ARGV) {
+  scan($root);
 }
 
-sub file_id {
+sub scan {
+  my $root = shift;
+  if ( -f $root ) {
+    update_file( file($root)->absolute );
+    return;
+  }
+  my @queue = ($root);
+  while (@queue) {
+    my $next = shift @queue;
+    my $dir  = dir($next)->absolute;
+    say "Scanning $dir";
+    my $store = file_to_store($dir);
+    my $have  = get_obj($store);
+    my $rkids = by_id( $have->{children} );
+    my $lkids = dir_scan($dir);
+
+    my @all    = uniq( keys %$rkids, keys %$lkids );
+    my @delete = ();
+    my @update = ();
+    my @scan   = ();
+
+    for my $kid (@all) {
+      my $lkid = $lkids->{$kid};
+      my $rkid = $rkids->{$kid};
+
+      unless ( defined $lkid ) {
+        push @delete, $rkid;
+        next;
+      }
+
+      if ( $lkid->{type} eq "dir" ) {
+        push @queue, $lkid->{obj};
+        next;
+      }
+
+      if ( need_update( $lkid, $rkid ) ) {
+        push @update, $lkid;
+      }
+    }
+
+    if (@delete) {
+      say "Delete:";
+      say "  ", $_->{_id} for @delete;
+    }
+
+    update(@update);
+
+  }
+}
+
+sub update {
+  my @obj = @_;
+
+  my $ua = LWP::UserAgent->new;
+
+  while (@obj) {
+    my @work = splice @obj, 0, CHUNK;
+    my $info = mediainfo( map { $_->{obj} } @work );
+    my $data = parse_mi($info);
+    for my $obj (@work) {
+      my $rec = { stat => $obj->{stat}, mediainfo => $data->{ $obj->{obj} } };
+      my $store_uri = store_uri( $obj->{_id} );
+
+      say "Updating $store_uri";
+      my $req = HTTP::Request->new(
+        PUT => $store_uri,
+        [Content_Type => "application/json"],
+        JSON->new->encode($rec)
+      );
+      my $resp = $ua->request($req);
+      die $resp->status_line unless $resp->is_success;
+    }
+  }
+}
+
+sub need_update {
+  my ( $lkid, $rkid ) = @_;
+  return 1 unless defined $rkid;
+  return 1
+   unless $rkid->{stat}{mtime} == $lkid->{stat}{mtime}
+   && $rkid->{stat}{size} == $lkid->{stat}{size};
+  return;
+}
+
+sub uniq {
+  my %seen = ();
+  return grep { !$seen{$_}++ } @_;
+}
+
+sub dir_scan {
+  my $dir  = shift;
+  my $kids = {};
+
+  for my $child ( $dir->children ) {
+    next if $child->basename =~ /^\./;
+    my $id   = file_uri( $O{node}, $child );
+    my $stat = obj_stat($child);
+    my $type = file_type( $stat->{mode} );
+    $kids->{$id} = {
+      _id  => "$id",
+      obj  => $child,
+      stat => $stat,
+      type => $type
+    };
+  }
+
+  return $kids;
+}
+
+sub by_id {
+  my $obj = shift;
+  return {} unless defined $obj;
+  my $by_id = {};
+  for my $o (@$obj) {
+    die unless exists $o->{_id};
+    $by_id->{ $o->{_id} } = $o;
+  }
+  return $by_id;
+}
+
+sub get_obj {
+  my $uri  = shift;
+  my $ua   = LWP::UserAgent->new;
+  my $resp = $ua->get($uri);
+  die $resp->status_line unless $resp->is_success;
+  my $content = $resp->content;
+  return unless length $content;
+  return JSON->new->decode($content);
+}
+
+sub file_to_store {
+  my $name = shift;
+  return store_uri( file_uri( $O{node}, $name ) );
+}
+
+sub file_uri {
   my ( $host, $name ) = @_;
   my $u = URI::file->new_abs($name);
   $u->host($host);
   return $u;
 }
 
+sub store_uri {
+  my $file_uri  = URI->new(shift);
+  my $store_uri = URI->new( $O{store} );
+  my ( undef, @path ) = $file_uri->path_segments;
+  $store_uri->path_segments( "store", $file_uri->host, @path );
+  return $store_uri;
+}
+
 sub parse_mi {
   my $doc = shift;
 
   my $data = {};
-  for my $file ( $info->findnodes('//Mediainfo/File') ) {
+  for my $file ( $doc->findnodes('//Mediainfo/File') ) {
     my $stash = {};
     for my $track ( $file->findnodes('track') ) {
       my $type = lc $track->getAttribute('type');
@@ -85,7 +216,7 @@ sub parse_mi {
     }
 
     my $gen = delete $stash->{general};
-    next unless keys %$stash;
+    # next unless keys %$stash;
 
     $stash->{general} = $gen->[0];
     my $file_name = $gen->[0]{completeName};
@@ -119,6 +250,33 @@ sub to_camel {
   return "ID" if "ID" eq uc $name;
   my ( $head, @tail ) = split /_+/, $name;
   return join "", lcfirst $head, map ucfirst, @tail;
+}
+
+sub file_type {
+  my $mode = shift;
+
+  return "file"   if S_ISREG($mode);
+  return "dir"    if S_ISDIR($mode);
+  return "link"   if S_ISLNK($mode);
+  return "block"  if S_ISBLK($mode);
+  return "char"   if S_ISCHR($mode);
+  return "fifo"   if S_ISFIFO($mode);
+  return "socket" if S_ISSOCK($mode);
+  return "unknown";
+
+}
+
+sub obj_stat {
+  my $obj = shift;
+
+  my $stat = ();
+  my @fld  = qw(
+   dev  ino   mode  nlink uid     gid rdev
+   size atime mtime ctime blksize blocks
+  );
+
+  @{$stat}{@fld} = stat $obj;
+  return $stat;
 }
 
 sub mediainfo {

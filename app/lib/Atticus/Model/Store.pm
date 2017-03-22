@@ -24,7 +24,17 @@ with qw(
  Atticus::Role::Mongo
 );
 
-sub _b_store { shift->db->collection("store") }
+sub _init_indexes {
+  my ( $self, $store ) = @_;
+  $store->ensure_index( { parent => 1 } );
+}
+
+sub _b_store {
+  my $self  = shift;
+  my $store = $self->db->collection("store");
+  $self->_init_indexes($store);
+  return $store;
+}
 
 sub _parent {
   my ( $self, $uri ) = @_;
@@ -74,14 +84,24 @@ sub _mkparent {
 sub get {
   my ( $self, $uri ) = @_;
 
-  return $self->_get_meta($uri);
+  my $store = $self->_store;
+  my $obj = $store->find_one( { _id => $uri } );
+
+  return $obj
+   unless defined $obj && $obj->{type} eq "dir";
+
+  $obj->{children}
+   = $store->find( { parent => $uri }, { type => 1, stat => 1 } )
+   ->sort( { _id => 1 } )->all;
+
+  return $obj;
 }
 
 sub put {
   my ( $self, $uri, $md ) = @_;
 
   $self->_mkparent($uri);
-  $self->_save( $uri, "file", { md => $md } );
+  $self->_save( $uri, "file", $md );
   return { status => "OK" };
 }
 
