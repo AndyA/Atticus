@@ -12,6 +12,7 @@ use v5.10;
 
 use Dancer qw( :syntax );
 
+use Atticus::Util::DataPath;
 use Moose;
 use Storable qw( dclone );
 use URI;
@@ -30,6 +31,7 @@ sub _init_indexes {
   my ( $self, $store ) = @_;
   $store->ensure_index( { parent => 1 } );
   $store->ensure_index( { type   => 1 } );
+  $store->ensure_index( { tags   => 1 } );
 }
 
 sub _b_store {
@@ -54,13 +56,59 @@ sub _get_meta {
   return $self->_store->find_one( { _id => $uri }, { type => 1 } );
 }
 
+sub _uniq {
+  my %seen = ();
+  return grep { !$seen{$_}++ } @_;
+}
+
+sub _gather_text {
+  my ( $self, $rec ) = @_;
+
+  my @text_field = qw(
+   mediainfo.audio.title
+   mediainfo.general.comapplequicktimekeywords
+   mediainfo.general.comment
+   mediainfo.general.copyright
+   mediainfo.general.description
+   mediainfo.general.fileName
+   mediainfo.general.movieMore
+   mediainfo.general.movieName
+   mediainfo.general.originalSourceFormName
+   mediainfo.general.title
+   mediainfo.general.titleMoreInfo
+   mediainfo.general.trackName
+  );
+
+  my $dp = Atticus::Util::DataPath->new( paths => \@text_field );
+  my @text = ();
+  $dp->visit(
+    $rec,
+    sub {
+      my ( $val, $path ) = @_;
+      push @text, $val if defined $val && length $val;
+    }
+  );
+  return join "\n", _uniq(@text);
+}
+
 sub _save {
   my ( $self, $uri, $type, $rec ) = @_;
+
   my $data = dclone( $rec // {} );
+
   $data->{_id}  = "$uri";
   $data->{type} = $type;
   my $parent = $self->_parent($uri);
   $data->{parent} = "$parent" if defined $parent;
+
+  if ( defined( my $mi = $data->{mediainfo} ) ) {
+    my %tags = %$mi;
+    delete $tags{general};
+    $data->{tags} = [sort keys %tags];
+
+    $data->{text} = $self->_gather_text($rec);
+  }
+
   $self->_store->save($data);
 }
 
@@ -96,10 +144,10 @@ sub get {
 }
 
 sub put {
-  my ( $self, $uri, $md ) = @_;
+  my ( $self, $uri, $data ) = @_;
 
   $self->_mkparent($uri);
-  $self->_save( $uri, "file", $md );
+  $self->_save( $uri, "file", $data );
   return { status => "OK" };
 }
 

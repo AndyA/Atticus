@@ -122,13 +122,9 @@ sub update_list {
     for my $obj (@work) {
       my $mi = $data->{ $obj->{obj} } // {};
 
-      my %tags = %$mi;
-      delete $tags{general};
-
       my $rec = {
         stat      => $obj->{stat},
-        mediainfo => $mi,
-        tags      => [sort keys %tags],
+        mediainfo => $mi
       };
 
       my $store_uri = store_uri( $obj->{_id} );
