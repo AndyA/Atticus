@@ -56,7 +56,7 @@ sub scan {
   }
   my @queue = ($root);
   while (@queue) {
-    my $next = shift @queue;
+    my $next = pop @queue;
     my $dir  = dir($next)->absolute;
     say "Scanning $dir";
     my $store = file_to_store($dir);
@@ -69,7 +69,7 @@ sub scan {
     my @update = ();
     my @scan   = ();
 
-    for my $kid ( sort @all ) {
+    for my $kid ( sort { $b cmp $a } @all ) {
       my $lkid = $lkids->{$kid};
       my $rkid = $rkids->{$kid};
 
