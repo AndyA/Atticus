@@ -32,26 +32,25 @@ sub _init_indexes {
   $store->ensure_index( { type   => 1 } );
   $store->ensure_index( { tags   => 1 } );
 
-  # TODO index weights
+  my %ft = (
+    "mediainfo.audio.title"                       => 3,
+    "mediainfo.general.title"                     => 3,
+    "mediainfo.general.comapplequicktimekeywords" => 1,
+    "mediainfo.general.comment"                   => 1,
+    "mediainfo.general.copyright"                 => 1,
+    "mediainfo.general.description"               => 1,
+    "mediainfo.general.fileName"                  => 1,
+    "mediainfo.general.movieMore"                 => 1,
+    "mediainfo.general.movieName"                 => 1,
+    "mediainfo.general.originalSourceFormName"    => 1,
+    "mediainfo.general.titleMoreInfo"             => 1,
+    "mediainfo.general.trackName"                 => 1,
+    "mediainfo.general.nameWords"                 => 2,
+  );
+
   $store->ensure_index(
-    { map { $_ => "text" }
-       qw(
-       mediainfo.audio.title
-       mediainfo.general.comapplequicktimekeywords
-       mediainfo.general.comment
-       mediainfo.general.copyright
-       mediainfo.general.description
-       mediainfo.general.fileName
-       mediainfo.general.movieMore
-       mediainfo.general.movieName
-       mediainfo.general.originalSourceFormName
-       mediainfo.general.title
-       mediainfo.general.titleMoreInfo
-       mediainfo.general.trackName
-       mediainfo.general.nameWords
-       )
-    },
-    { name => "fullText" }
+    { map { $_ => "text" } keys %ft },
+    { name => "fullText", weights => \%ft }
   );
 }
 
