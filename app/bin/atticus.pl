@@ -273,6 +273,11 @@ sub prepare_track {
     ( $track->{nameWords} = $track->{completeName} ) =~ s/[_\W]+/ /g;
   }
 
+  # "language" is special to MongoDB
+  if ( exists $track->{language} ) {
+    $track->{languageName} = delete $track->{language};
+  }
+
   return $track;
 }
 
