@@ -115,7 +115,7 @@ sub update {
       my $req = HTTP::Request->new(
         PUT => $store_uri,
         [Content_Type => "application/json"],
-        JSON->new->encode($rec)
+        JSON->new->utf8->encode($rec)
       );
       my $resp = $ua->request($req);
       die $resp->status_line unless $resp->is_success;
@@ -175,7 +175,7 @@ sub get_obj {
   die $resp->status_line unless $resp->is_success;
   my $content = $resp->content;
   return unless length $content;
-  return JSON->new->decode($content);
+  return JSON->new->utf8->decode($content);
 }
 
 sub file_to_store {

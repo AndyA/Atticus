@@ -30,7 +30,7 @@ prefix '/store' => sub {
 
   put '/*/**' => sub {
     my $uri = make_uri(splat);
-    my $md  = JSON->new->decode( request->body );
+    my $md  = JSON->new->utf8->decode( request->body );
     return Atticus::Factory->store->put( $uri, $md );
   };
 };
