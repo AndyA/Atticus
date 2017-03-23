@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Fcntl ':mode';
+use File::Temp;
 use Getopt::Long;
 use HTTP::Request;
 use JSON;
@@ -93,7 +94,7 @@ sub scan {
       say "  ", $_->{_id} for @delete;
     }
 
-    update(reverse @update);
+    update( reverse @update );
 
   }
 }
@@ -280,11 +281,60 @@ sub obj_stat {
   my @data = stat $obj;
   return unless @data;
   @{$stat}{@fld} = @data;
+
   return $stat;
 }
 
 sub mediainfo {
-  my @file = map { file($_)->absolute } @_;
+  my @file = @_;
+  my ( @oddball, @direct );
+
+  for my $obj ( map { file($_)->absolute } @file ) {
+    if   ( $obj =~ /[?*"<>]/ ) { push @oddball, $obj }
+    else                       { push @direct,  $obj }
+  }
+
+  return run_mi(@direct) unless @oddball;
+
+  # Make temp links to problematic files
+  my $td   = File::Temp->newdir;
+  my $next = 0;
+  my (%oddmap);
+  for my $obj (@oddball) {
+    my ($ext) = $obj->basename =~ m{(\.[^.]+)$};
+    my $tmp = file( $td, sprintf "%08d%s", $next++, $ext );
+    symlink $obj, $tmp;
+    $oddmap{$tmp} = $obj;
+  }
+
+  my $doc = run_mi( @direct, keys %oddmap );
+
+  # Fix up XML
+  for my $nd ( $doc->findnodes("//Mediainfo/File/track/Complete_name") ) {
+    my $val  = $nd->textContent;
+    my $orig = $oddmap{$val};
+    next unless defined $orig;
+    set_node_text( $nd, $orig );
+    my $par = $nd->parentNode();
+    for my $fnd ( $par->findnodes("Folder_name") ) {
+      set_node_text( $fnd, $orig->parent );
+    }
+    for my $nnd ( $par->findnodes("File_name") ) {
+      set_node_text( $nnd, $orig->basename );
+    }
+  }
+
+  return $doc;
+}
+
+sub set_node_text {
+  my ( $nd, $txt ) = @_;
+  $nd->removeChildNodes;
+  $nd->addChild( XML::LibXML::Text->new($txt) );
+}
+
+sub run_mi {
+  my @file = @_;
   my $xml = run_cmd( 'mediainfo', '--Full', '--Output=XML', @file );
   return XML::LibXML->load_xml( string => $xml );
 }
