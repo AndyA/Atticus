@@ -93,7 +93,7 @@ sub scan {
       say "  ", $_->{_id} for @delete;
     }
 
-    update(@update);
+    update(reverse @update);
 
   }
 }
