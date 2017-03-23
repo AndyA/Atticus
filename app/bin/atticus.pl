@@ -143,8 +143,9 @@ sub dir_scan {
 
   for my $child ( $dir->children ) {
     next if $child->basename =~ /^\./;
-    my $id   = file_uri( $O{node}, $child );
+    my $id = file_uri( $O{node}, $child );
     my $stat = obj_stat($child);
+    next unless defined $stat;
     my $type = file_type( $stat->{mode} );
     $kids->{$id} = {
       _id  => "$id",
@@ -255,6 +256,8 @@ sub to_camel {
 sub file_type {
   my $mode = shift;
 
+  return "unknown" unless defined $mode;
+
   return "file"   if S_ISREG($mode);
   return "dir"    if S_ISDIR($mode);
   return "link"   if S_ISLNK($mode);
@@ -274,8 +277,9 @@ sub obj_stat {
    dev  ino   mode  nlink uid     gid rdev
    size atime mtime ctime blksize blocks
   );
-
-  @{$stat}{@fld} = stat $obj;
+  my @data = stat $obj;
+  return unless @data;
+  @{$stat}{@fld} = @data;
   return $stat;
 }
 
