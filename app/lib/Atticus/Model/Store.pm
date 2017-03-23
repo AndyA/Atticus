@@ -12,7 +12,6 @@ use v5.10;
 
 use Dancer qw( :syntax );
 
-use Atticus::Util::DataPath;
 use Moose;
 use Storable qw( dclone );
 use URI;
@@ -32,7 +31,28 @@ sub _init_indexes {
   $store->ensure_index( { parent => 1 } );
   $store->ensure_index( { type   => 1 } );
   $store->ensure_index( { tags   => 1 } );
-  $store->ensure_index( { text   => "text" } );
+
+  # TODO index weights
+  $store->ensure_index(
+    { map { $_ => "text" }
+       qw(
+       mediainfo.audio.title
+       mediainfo.general.comapplequicktimekeywords
+       mediainfo.general.comment
+       mediainfo.general.copyright
+       mediainfo.general.description
+       mediainfo.general.fileName
+       mediainfo.general.movieMore
+       mediainfo.general.movieName
+       mediainfo.general.originalSourceFormName
+       mediainfo.general.title
+       mediainfo.general.titleMoreInfo
+       mediainfo.general.trackName
+       mediainfo.general.nameWords
+       )
+    },
+    { name => "fullText" }
+  );
 }
 
 sub _b_store {
@@ -57,41 +77,6 @@ sub _get_meta {
   return $self->_store->find_one( { _id => $uri }, { type => 1 } );
 }
 
-sub _uniq {
-  my %seen = ();
-  return grep { !$seen{$_}++ } @_;
-}
-
-sub _gather_text {
-  my ( $self, $rec ) = @_;
-
-  my @text_field = qw(
-   mediainfo.audio.title
-   mediainfo.general.comapplequicktimekeywords
-   mediainfo.general.comment
-   mediainfo.general.copyright
-   mediainfo.general.description
-   mediainfo.general.fileName
-   mediainfo.general.movieMore
-   mediainfo.general.movieName
-   mediainfo.general.originalSourceFormName
-   mediainfo.general.title
-   mediainfo.general.titleMoreInfo
-   mediainfo.general.trackName
-  );
-
-  my $dp = Atticus::Util::DataPath->new( paths => \@text_field );
-  my @text = ();
-  $dp->visit(
-    $rec,
-    sub {
-      my ( $val, $path ) = @_;
-      push @text, $val if defined $val && length $val;
-    }
-  );
-  return join "\n", _uniq(@text);
-}
-
 sub _save {
   my ( $self, $uri, $type, $rec ) = @_;
 
@@ -106,8 +91,6 @@ sub _save {
     my %tags = %$mi;
     delete $tags{general};
     $data->{tags} = [sort keys %tags];
-
-    $data->{text} = $self->_gather_text($rec);
   }
 
   $self->_store->save($data);

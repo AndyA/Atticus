@@ -231,7 +231,7 @@ sub parse_mi {
         my $key = to_camel( $node->nodeName );
         push @{ $rec->{$key} }, $node->textContent;
       }
-      push @{ $stash->{$type} }, clean_mi_track($rec);
+      push @{ $stash->{$type} }, prepare_track($rec);
     }
 
     my $gen = delete $stash->{general};
@@ -257,6 +257,31 @@ sub clean_mi_value {
   my @v = sort { length $a <=> length $b } sort @$vals;
 
   return $v[0];
+}
+
+sub prepare_track {
+  my $rec   = shift;
+  my $track = clean_mi_track($rec);
+
+  if ( exists $track->{width} && exists $track->{height} ) {
+    my ( $w, $h ) = @{$track}{ "width", "height" };
+    $track->{area} = $w * $h;
+    $track->{orientation} = orientation( $w, $h );
+  }
+
+  if ( exists $track->{completeName} ) {
+    ( $track->{nameWords} = $track->{completeName} ) =~ s/[_\W]+/ /g;
+  }
+
+  return $track;
+}
+
+sub orientation {
+  my ( $w, $h ) = @_;
+
+  return "square" if $w == $h;
+  return "landscape" if $w > $h;
+  return "portrait";
 }
 
 sub clean_mi_track {
