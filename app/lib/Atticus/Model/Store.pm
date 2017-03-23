@@ -32,6 +32,7 @@ sub _init_indexes {
   $store->ensure_index( { parent => 1 } );
   $store->ensure_index( { type   => 1 } );
   $store->ensure_index( { tags   => 1 } );
+  $store->ensure_index( { text   => "text" } );
 }
 
 sub _b_store {
