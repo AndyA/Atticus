@@ -15,7 +15,7 @@ use Moose::Util::TypeConstraints;
 
 use Dancer ':syntax';
 use Dancer::Plugin;
-use Dancer::Plugin::MongoDB;
+use Dancer::Plugin::Mango;
 
 # Bodge to allow Dancer::Plugin::MongoDB to work
 register_hook 'database_connected';

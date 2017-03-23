@@ -4,7 +4,7 @@ use Moose::Role;
 
 =head1 NAME
 
-Atticus::Role::Mongo - Mongo handle etc
+Atticus::Role::Mongo - Mango handle etc
 
 =cut
 

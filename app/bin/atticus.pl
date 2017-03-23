@@ -91,11 +91,6 @@ sub scan {
       }
     }
 
-    if (@delete) {
-      say "Delete:";
-      say "  ", $_->{_id} for @delete;
-    }
-
     update_list( reverse @update );
     delete_list( reverse @delete );
 
@@ -107,9 +102,11 @@ sub delete_list {
 }
 
 sub delete_obj {
-  my $uri  = shift;
-  my $ua   = LWP::UserAgent->new;
-  my $resp = $ua->delete($uri);
+  my $uri       = shift;
+  my $ua        = LWP::UserAgent->new;
+  my $store_uri = store_uri($uri);
+  say "Deleting $store_uri";
+  my $resp = $ua->delete($store_uri);
   die $resp->status_line unless $resp->is_success;
 }
 
@@ -123,7 +120,17 @@ sub update_list {
     my $info = mediainfo( map { $_->{obj} } @work );
     my $data = parse_mi($info);
     for my $obj (@work) {
-      my $rec = { stat => $obj->{stat}, mediainfo => $data->{ $obj->{obj} } };
+      my $mi = $data->{ $obj->{obj} } // {};
+
+      my %tags = %$mi;
+      delete $tags{general};
+
+      my $rec = {
+        stat      => $obj->{stat},
+        mediainfo => $mi,
+        tags      => [sort keys %tags],
+      };
+
       my $store_uri = store_uri( $obj->{_id} );
 
       say "Updating $store_uri";

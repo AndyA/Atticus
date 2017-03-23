@@ -28,7 +28,7 @@ engines:
 serializer: JSON
 
 plugins:
-  MongoDB:
+  Mango:
     host: localhost
     port: 27017
     db_name: atticus
