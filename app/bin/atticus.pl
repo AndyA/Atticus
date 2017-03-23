@@ -265,8 +265,9 @@ sub prepare_track {
 
   if ( exists $track->{width} && exists $track->{height} ) {
     my ( $w, $h ) = @{$track}{ "width", "height" };
-    $track->{area} = $w * $h;
-    $track->{orientation} = orientation( $w, $h );
+    $track->{area}                = $w * $h;
+    $track->{orientation}         = orientation( $w, $h );
+    $track->{computedAspectRatio} = $w / $h;
   }
 
   if ( exists $track->{completeName} ) {
