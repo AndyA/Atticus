@@ -84,6 +84,8 @@ sub scan {
         next;
       }
 
+      next unless $lkid->{type} eq "file";
+
       if ( need_update( $lkid, $rkid ) ) {
         push @update, $lkid;
       }
@@ -94,12 +96,24 @@ sub scan {
       say "  ", $_->{_id} for @delete;
     }
 
-    update( reverse @update );
+    update_list( reverse @update );
+    delete_list( reverse @delete );
 
   }
 }
 
-sub update {
+sub delete_list {
+  delete_obj( $_->{_id} ) for @_;
+}
+
+sub delete_obj {
+  my $uri  = shift;
+  my $ua   = LWP::UserAgent->new;
+  my $resp = $ua->delete($uri);
+  die $resp->status_line unless $resp->is_success;
+}
+
+sub update_list {
   my @obj = @_;
 
   my $ua = LWP::UserAgent->new;

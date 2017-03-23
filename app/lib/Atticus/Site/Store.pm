@@ -33,6 +33,12 @@ prefix '/store' => sub {
     my $md  = JSON->new->utf8->decode( request->body );
     return Atticus::Factory->store->put( $uri, $md );
   };
+
+  del '/*/**' => sub {
+    my $uri = make_uri(splat);
+    return Atticus::Factory->store->delete($uri);
+
+  };
 };
 
 true;

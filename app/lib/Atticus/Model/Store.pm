@@ -10,6 +10,8 @@ Atticus::Model::Store - access to MD store
 
 use v5.10;
 
+use Dancer qw( :syntax );
+
 use Moose;
 use Storable qw( dclone );
 use URI;
@@ -27,6 +29,7 @@ with qw(
 sub _init_indexes {
   my ( $self, $store ) = @_;
   $store->ensure_index( { parent => 1 } );
+  $store->ensure_index( { type   => 1 } );
 }
 
 sub _b_store {
@@ -65,12 +68,7 @@ sub _mkpath {
   my ( $self, $uri ) = @_;
 
   my $obj = $self->_get_meta($uri);
-  if ( defined $obj ) {
-    die "$uri is not a dir"
-     unless $obj->{type} eq "dir";
-    return;
-  }
-
+  return if defined $obj && $obj->{type} eq "dir";
   $self->_mkparent($uri);
   $self->_save( $uri, "dir" );
 }
@@ -102,6 +100,15 @@ sub put {
 
   $self->_mkparent($uri);
   $self->_save( $uri, "file", $md );
+  return { status => "OK" };
+}
+
+sub delete {
+  my ( $self, $uri ) = @_;
+  my $store = $self->_store;
+  my $pat   = qr{^\Q$uri\E/};
+  $store->remove( { _id => $uri } );    # document
+  $store->remove( { _id => $pat } );    # in case of dir
   return { status => "OK" };
 }
 
