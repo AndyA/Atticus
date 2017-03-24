@@ -130,6 +130,7 @@ sub update_list {
       my $store_uri = store_uri( $obj->{_id} );
 
       say "Updating $store_uri";
+      #      say JSON->new->utf8->pretty->canonical->encode($rec);
       my $req = HTTP::Request->new(
         PUT => $store_uri,
         [Content_Type => "application/json"],
@@ -250,7 +251,8 @@ sub clean_mi_value {
 
   # Favour any regular numbers
   for my $val (@$vals) {
-    return 0 + $val if looks_like_number($val);
+    return 0 + $val
+     if looks_like_number($val) && lc $val ne "nan";
   }
 
   # Failing that choose the shortest value
