@@ -32,20 +32,22 @@ sub _init_indexes {
   $store->ensure_index( { type   => 1 } );
   $store->ensure_index( { tags   => 1 } );
 
+  $store->ensure_index( { "exif.location" => "2dsphere" } );
+
   my %ft = (
-    "mediainfo.audio.title"                       => 3,
-    "mediainfo.general.title"                     => 3,
-    "mediainfo.general.comapplequicktimekeywords" => 1,
-    "mediainfo.general.comment"                   => 1,
-    "mediainfo.general.copyright"                 => 1,
-    "mediainfo.general.description"               => 1,
+    "mediainfo.audio.title"                       => 10,
+    "mediainfo.general.title"                     => 10,
+    "mediainfo.general.comapplequicktimekeywords" => 5,
+    "mediainfo.general.comment"                   => 5,
+    "mediainfo.general.copyright"                 => 2,
+    "mediainfo.general.description"               => 5,
     "mediainfo.general.fileName"                  => 1,
-    "mediainfo.general.movieMore"                 => 1,
-    "mediainfo.general.movieName"                 => 1,
-    "mediainfo.general.originalSourceFormName"    => 1,
-    "mediainfo.general.titleMoreInfo"             => 1,
+    "mediainfo.general.movieMore"                 => 3,
+    "mediainfo.general.movieName"                 => 3,
+    "mediainfo.general.originalSourceFormName"    => 3,
+    "mediainfo.general.titleMoreInfo"             => 3,
     "mediainfo.general.trackName"                 => 1,
-    "mediainfo.general.nameWords"                 => 2,
+    "mediainfo.general.nameWords"                 => 4,
   );
 
   $store->ensure_index(

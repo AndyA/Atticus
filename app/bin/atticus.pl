@@ -10,6 +10,7 @@ use Fcntl ':mode';
 use File::Temp;
 use Getopt::Long;
 use HTTP::Request;
+use Image::ExifTool;
 use JSON;
 use LWP::UserAgent;
 use Path::Class;
@@ -121,10 +122,12 @@ sub update_list {
     my $data = parse_mi($info);
     for my $obj (@work) {
       my $mi = $data->{ $obj->{obj} } // {};
+      my $exif = get_exif( $obj->{obj} );
 
       my $rec = {
         stat      => $obj->{stat},
-        mediainfo => $mi
+        mediainfo => $mi,
+        exif      => $exif
       };
 
       my $store_uri = store_uri( $obj->{_id} );
@@ -246,13 +249,17 @@ sub parse_mi {
   return $data;
 }
 
+sub valid_number {
+  my $val = shift;
+  return looks_like_number($val) && lc $val ne "nan";
+}
+
 sub clean_mi_value {
   my $vals = shift;
 
   # Favour any regular numbers
   for my $val (@$vals) {
-    return 0 + $val
-     if looks_like_number($val) && lc $val ne "nan";
+    return 0 + $val if valid_number($val);
   }
 
   # Failing that choose the shortest value
@@ -295,6 +302,76 @@ sub orientation {
 sub clean_mi_track {
   my $rec = shift;
   return { map { $_ => clean_mi_value( $rec->{$_} ) } keys %$rec };
+}
+
+sub fix_exif_value {
+  my $val = shift;
+
+  if ( ref $val ) {
+    return [map { fix_exif_value($_) } @$val]
+     if "ARRAY" eq ref $val;
+    die "Can't handle ", ref $val;
+  }
+
+  my @part = split /\s+/, $val;
+  if ( @part > 1 ) {
+    my @valid = grep { valid_number($_) } @part;
+    if ( @valid == @part ) {
+      return [map { 0 + $_ } @valid];
+    }
+  }
+
+  return 0 + $val
+   if valid_number($val);
+  return $val;
+}
+
+sub fix_exif_info {
+  my $info = shift;
+
+  my $out = {};
+  while ( my ( $key, $val ) = each %$info ) {
+    next if ref $val && "SCALAR" eq ref $val;
+    ( my $nkey = $key ) =~ s/\s*\((\d+)\)/$1/g;
+    $out->{$nkey} = fix_exif_value($val);
+  }
+  return $out;
+}
+
+sub get_loc {
+  my $info = shift;
+  return $info->{GPSPosition}
+   if exists $info->{GPSPosition};
+  return [$info->{GPSLatitude}, $info->{GPSLongitude}]
+   if exists $info->{GPSLatitude} && exist $info->{GPSLongitude};
+  return;
+}
+
+sub augment_exif_info {
+  my $info = shift;
+
+  my $loc = get_loc($info);
+  if ( defined $loc ) {
+    my ( $lat, $lon ) = @$loc;
+    $info->{location} = {
+      type        => "Point",
+      coordinates => [$lon, $lat] };
+  }
+
+  return $info;
+}
+
+sub get_exif {
+  my $file = shift;
+
+  my $ex = Image::ExifTool->new;
+  $ex->Options(
+    Compact     => 1,
+    CoordFormat => '%f',
+    PrintConv   => 0,
+  );
+
+  return augment_exif_info( fix_exif_info( $ex->ImageInfo("$file") ) );
 }
 
 sub to_camel {
