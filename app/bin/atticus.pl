@@ -353,9 +353,11 @@ sub augment_exif_info {
   my $loc = get_loc($info);
   if ( defined $loc ) {
     my ( $lat, $lon ) = @$loc;
-    $info->{location} = {
-      type        => "Point",
-      coordinates => [$lon, $lat] };
+    if ( $lat != 0 || $lon != 0 ) {
+      $info->{location} = {
+        type        => "Point",
+        coordinates => [$lon, $lat] };
+    }
   }
 
   return $info;
