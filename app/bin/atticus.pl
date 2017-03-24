@@ -338,31 +338,6 @@ sub fix_exif_info {
   return $out;
 }
 
-sub get_loc {
-  my $info = shift;
-  return $info->{GPSPosition}
-   if exists $info->{GPSPosition};
-  return [$info->{GPSLatitude}, $info->{GPSLongitude}]
-   if exists $info->{GPSLatitude} && exist $info->{GPSLongitude};
-  return;
-}
-
-sub augment_exif_info {
-  my $info = shift;
-
-  my $loc = get_loc($info);
-  if ( defined $loc ) {
-    my ( $lat, $lon ) = @$loc;
-    if ( $lat != 0 || $lon != 0 ) {
-      $info->{location} = {
-        type        => "Point",
-        coordinates => [$lon, $lat] };
-    }
-  }
-
-  return $info;
-}
-
 sub get_exif {
   my $file = shift;
 
@@ -373,7 +348,7 @@ sub get_exif {
     PrintConv   => 0,
   );
 
-  return augment_exif_info( fix_exif_info( $ex->ImageInfo("$file") ) );
+  return fix_exif_info( $ex->ImageInfo("$file") );
 }
 
 sub to_camel {

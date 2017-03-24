@@ -78,21 +78,68 @@ sub _get_meta {
   return $self->_store->find_one( { _id => $uri }, { type => 1 } );
 }
 
-sub _save {
-  my ( $self, $uri, $type, $rec ) = @_;
+sub _get_loc {
+  my $info = shift;
+  return $info->{GPSPosition}
+   if exists $info->{GPSPosition};
+  return [$info->{GPSLatitude}, $info->{GPSLongitude}]
+   if exists $info->{GPSLatitude} && exist $info->{GPSLongitude};
+  return;
+}
 
+sub _decode_sfx_meta {
+  my ( $self, $meta ) = @_;
+
+  my $orig = $meta;
+
+  my $out = {};
+  while ( $meta =~ s/^(\w)="(.*?)":\s*// ) {
+    my ( $k, $v ) = ( $1, $2 );
+    $out->{$k} = $v;
+  }
+
+  return $orig if length $meta;
+  return $out;
+}
+
+sub _augment_data {
+  my $rec = shift;
   my $data = dclone( $rec // {} );
-
-  $data->{_id}  = "$uri";
-  $data->{type} = $type;
-  my $parent = $self->_parent($uri);
-  $data->{parent} = "$parent" if defined $parent;
 
   if ( defined( my $mi = $data->{mediainfo} ) ) {
     my %tags = %$mi;
     delete $tags{general};
     $data->{tags} = [sort keys %tags];
   }
+
+  if ( defined( my $exif = $data->{exif} ) ) {
+    my $loc = $self->_get_loc($exif);
+    if ( defined $loc ) {
+      my ( $lat, $lon ) = @$loc;
+      if ( $lat != 0 || $lon != 0 ) {
+        $exif->{location} = {
+          type        => "Point",
+          coordinates => [$lon, $lat] };
+      }
+    }
+
+    if ( exists $exif->{Description} ) {
+      $exif->{Description} = $self->_decode_sfx_meta( $exif->{Description} );
+    }
+  }
+
+  return $data;
+}
+
+sub _save {
+  my ( $self, $uri, $type, $rec ) = @_;
+
+  my $data = _augment_data($rec);
+
+  $data->{_id}  = "$uri";
+  $data->{type} = $type;
+  my $parent = $self->_parent($uri);
+  $data->{parent} = "$parent" if defined $parent;
 
   $self->_store->save($data);
 }
