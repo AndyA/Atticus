@@ -81,17 +81,22 @@ sub _get_meta {
 sub _get_loc {
   my ( $self, $info ) = @_;
 
+  # Try to find the GPS position. It may well be that one of these
+  # things implies the other anyway.
+
   return $info->{GPSPosition}
    if exists $info->{GPSPosition};
+
   return [$info->{GPSLatitude}, $info->{GPSLongitude}]
    if exists $info->{GPSLatitude} && exist $info->{GPSLongitude};
+
   return;
 }
 
 sub _decode_sfx_meta {
   my ( $self, $meta ) = @_;
 
-  my $orig = $meta;
+  return unless defined $meta && length $meta;
 
   my $out = {};
   while ( $meta =~ s/^(\w)="(.*?)":\s*// ) {
@@ -99,7 +104,7 @@ sub _decode_sfx_meta {
     $out->{$k} = $v;
   }
 
-  return $orig if length $meta;
+  return if length $meta;
   return $out;
 }
 
@@ -125,7 +130,11 @@ sub _augment_data {
     }
 
     if ( exists $exif->{Description} ) {
-      $exif->{Description} = $self->_decode_sfx_meta( $exif->{Description} );
+      my $meta = $self->_decode_sfx_meta( $exif->{Comment} )
+       // $self->_decode_sfx_meta( $exif->{Description} );
+
+      $exif->{MetaInfo} = $meta
+       if defined $meta;
     }
   }
 
