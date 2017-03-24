@@ -79,7 +79,8 @@ sub _get_meta {
 }
 
 sub _get_loc {
-  my $info = shift;
+  my ( $self, $info ) = @_;
+
   return $info->{GPSPosition}
    if exists $info->{GPSPosition};
   return [$info->{GPSLatitude}, $info->{GPSLongitude}]
@@ -103,7 +104,7 @@ sub _decode_sfx_meta {
 }
 
 sub _augment_data {
-  my $rec = shift;
+  my ( $self, $rec ) = @_;
   my $data = dclone( $rec // {} );
 
   if ( defined( my $mi = $data->{mediainfo} ) ) {
@@ -134,7 +135,7 @@ sub _augment_data {
 sub _save {
   my ( $self, $uri, $type, $rec ) = @_;
 
-  my $data = _augment_data($rec);
+  my $data = $self->_augment_data($rec);
 
   $data->{_id}  = "$uri";
   $data->{type} = $type;
