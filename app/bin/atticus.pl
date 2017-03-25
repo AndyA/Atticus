@@ -129,7 +129,7 @@ sub update_list {
         mediainfo => $mi,
       };
       $rec->{exif} = $exif
-       unless $exif->{FileType} eq "XML";
+       unless defined $exif->{FileType} && $exif->{FileType} eq "XML";
 
       my $store_uri = store_uri( $obj->{_id} );
 
