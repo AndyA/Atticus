@@ -127,8 +127,9 @@ sub update_list {
       my $rec = {
         stat      => $obj->{stat},
         mediainfo => $mi,
-        exif      => $exif
       };
+      $rec->{exif} = $exif
+       unless $exif->{FileType} eq "XML";
 
       my $store_uri = store_uri( $obj->{_id} );
 
@@ -309,6 +310,7 @@ sub fix_exif_value {
   my $val = shift;
 
   if ( ref $val ) {
+    return if "SCALAR" eq ref $val;
     return [map { fix_exif_value($_) } @$val]
      if "ARRAY" eq ref $val;
     die "Can't handle ", ref $val;
@@ -334,7 +336,8 @@ sub fix_exif_info {
   while ( my ( $key, $val ) = each %$info ) {
     next if ref $val && "SCALAR" eq ref $val;
     ( my $nkey = $key ) =~ s/\s*\((\d+)\)/$1/g;
-    $out->{$nkey} = fix_exif_value($val);
+    my $nval = fix_exif_value($val);
+    $out->{$nkey} = $nval if defined $nval;
   }
   return $out;
 }
