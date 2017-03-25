@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="Content-type" content="text/html; charset=<% settings.charset %>" />
-    <title>Atticus</title>
-    <link rel="stylesheet" href="/css/style.css" />
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js" charset="utf-8"></script>      
-    </script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/atticus/css/style.css" rel="stylesheet" />
+    <link href="/css/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+    <title>[% title %]</title>
   </head>
   <body>
-    [% content %]
-    <div id="footer">
-      Powered by <a href="http://perldancer.org/">Dancer</a> <% dancer_version %>
+    <div id="wrapper">
+      <div id="spinner"></div>
+      [% content %]
     </div>
+    <script src="/atticus/js/app.jsx" type="text/javascript"></script>
   </body>
 </html>

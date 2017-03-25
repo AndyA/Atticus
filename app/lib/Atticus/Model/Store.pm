@@ -42,6 +42,7 @@ sub _init_indexes {
     "mediainfo.general.copyright"                 => 2,
     "mediainfo.general.description"               => 5,
     "mediainfo.general.fileName"                  => 1,
+    "mediainfo.general.performer"                 => 4,
     "mediainfo.general.movieMore"                 => 3,
     "mediainfo.general.movieName"                 => 3,
     "mediainfo.general.originalSourceFormName"    => 3,
@@ -108,6 +109,15 @@ sub _decode_sfx_meta {
   return $out;
 }
 
+sub _valid_loc {
+  my ( $self, $lat, $lon ) = @_;
+
+  return if $lat == 0 && $lon == 0;
+  return if $lat < -90  || $lat > 90;
+  return if $lon < -180 || $lon > 180;
+  return 1;
+}
+
 sub _augment_data {
   my ( $self, $rec ) = @_;
   my $data = dclone( $rec // {} );
@@ -122,7 +132,7 @@ sub _augment_data {
     my $loc = $self->_get_loc($exif);
     if ( defined $loc ) {
       my ( $lat, $lon ) = @$loc;
-      if ( $lat != 0 || $lon != 0 ) {
+      if ( $self->_valid_loc( $lat, $lon ) ) {
         $exif->{location} = {
           type        => "Point",
           coordinates => [$lon, $lat] };
@@ -173,6 +183,16 @@ sub get {
   my ( $self, $uri ) = @_;
 
   my $store = $self->_store;
+
+  # Special case: return a synthetic root object
+  if ( "$uri" eq "/" ) {
+    return {
+      type     => "dir",
+      children => $store->find( { parent => { '$exists' => 0 } },
+        { type => 1, stat => 1 } )->sort( { _id => 1 } )->all
+    };
+  }
+
   my $obj = $store->find_one( { _id => $uri } );
 
   return $obj
@@ -188,6 +208,8 @@ sub get {
 sub put {
   my ( $self, $uri, $data ) = @_;
 
+  die if "$uri" eq "/";
+
   $self->_mkparent($uri);
   $self->_save( $uri, "file", $data );
   return { status => "OK" };
@@ -195,6 +217,9 @@ sub put {
 
 sub delete {
   my ( $self, $uri ) = @_;
+
+  die if "$uri" eq "/";
+
   my $store = $self->_store;
   my $pat   = qr{^\Q$uri\E/};
   $store->remove( { _id => $uri } );    # document

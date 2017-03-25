@@ -2,7 +2,7 @@
 
 use Dancer;
 
-use Atticus::Site;
 use Atticus::Site::Store;
+use Atticus::Site;
 
 dance;

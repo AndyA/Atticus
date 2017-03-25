@@ -1,0 +1,25 @@
+// Helper for calculating column widths
+//
+// @columns: 10, 10, 12, 3, 9;
+//
+// .columnist(@columns, {
+//   .col-@{i} {
+//     width: percentage(@width / @sum);
+//   }
+// });
+
+.columnist(@list, @code) {
+  & {
+    .loop(@i, @sum) when (@i =< length(@list)) {
+      @width: extract(@list, @i);
+      @code();
+      .loop(@i + 1, @sum);
+    }
+
+    .sum(@i, @sum) when (@i < length(@list)) { .sum(@i + 1, @sum + extract(@list, @i)) }
+    .sum(@i, @sum) when (@i = length(@list)) { .loop(1,     @sum + extract(@list, @i)) }
+
+    .sum(1, 0);
+  }
+}
+
