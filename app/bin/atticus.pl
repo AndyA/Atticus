@@ -250,11 +250,9 @@ sub parse_mi {
 }
 
 sub valid_number {
-  my $val = lc shift;
-  return
-      looks_like_number($val)
-   && $val ne "nan"
-   && $val ne "inf";
+  my $val = shift;
+  return looks_like_number($val)
+   && $val !~ /^(nan|inf|infinity)$/i;
 }
 
 sub clean_mi_value {
