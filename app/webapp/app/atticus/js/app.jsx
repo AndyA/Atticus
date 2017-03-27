@@ -10,37 +10,115 @@ import {
   Nav,
   NavItem,
   NavDropdown,
-  MenuItem,
-  Glyphicon
+  MenuItem
 } from "react-bootstrap";
 
-import {LinkContainer} from "react-router-bootstrap";
-
 import JSONComponent from "atticus/app/JSONComponent.jsx";
-import ApproveContainer from "atticus/app/ApproveContainer.jsx";
-import EditContainer from "atticus/app/EditContainer.jsx";
-
-import {StateIcon} from "atticus/app/Common.jsx";
-
-import {config} from "atticus/app/Config";
 import {progress} from "atticus/app/Progress";
 
 import numberFormat from "underscore.string/numberFormat";
 
+function getSuffix(pfx, str) {
+  if (str.length < pfx.length)
+    return null;
+  if (str.substr(0, pfx.length) !== pfx)
+    return null;
+  return str.substr(pfx.length);
+}
+
+function atticusURI(id) {
+  var sfx = getSuffix("file://", id);
+  if (sfx === null)
+    throw new Exception("Invalid atticus ID: " + id);
+  return "/atticus/" + sfx;
+}
+
 class Atticus extends React.Component {
+
+  getBreadcrumbs() {
+    var path = this.props.path;
+    var pe = path.split("/");
+
+    if (pe[pe.length - 1] === "")
+      pe.pop();
+
+    if (pe.length === 0) {
+      return (
+        <li className="breadcrumb-item"><i className="fa fa-home"></i></li>
+      );
+    }
+
+    var out = [];
+
+    out.unshift(
+      <li className="breadcrumb-item">{pe.pop()}</li>
+    );
+
+    while (pe.length) {
+      var link = "/atticus/" + pe.join("/");
+      out.unshift(
+        <li className="breadcrumb-item">
+          <NavLink to={link}>{pe.pop()}</NavLink>
+        </li>
+      );
+    }
+
+    out.unshift(
+      <li className="breadcrumb-item">
+        <NavLink to="/atticus/"><i className="fa fa-home"></i></NavLink>
+      </li>
+    );
+
+    return out;
+  }
+
+  getBody() {
+    var links = [];
+
+    if (this.props.dir) {
+      for (var obj of this.props.dir.children) {
+        var uri = atticusURI(obj._id);
+        if (uri === null)
+          continue;
+        links.push(
+          <div key={obj._id}>
+            <NavLink to={uri}>{obj._id}</NavLink>
+          </div>
+        );
+      }
+    }
+    return links;
+  }
+
   render() {
+
     return (
       <div>
-        <NavLink to="/atticus/some/page">A page {this.props.path}</NavLink>
+        <ol className="breadcrumb">{this.getBreadcrumbs()}</ol>
+        <div className="viewer">{this.getBody()}</div>
       </div>
     );
   }
 }
 
-class AtticusContainer extends React.Component {
+class AtticusContainer extends JSONComponent {
+  dataURI(props) {
+    return "/store/" + props.match.params[0];
+  }
+
+  dataFieldName() {
+    return "dir";
+  }
+
   render() {
-    console.log("Rendering ", this.props.match.params[0]);
-    return React.createElement(Atticus, {path: this.props.match.params[0]});
+    var props = {
+      path: this.props.match.params[0]
+    };
+
+    if (this.state && this.state.dir)
+      props.dir = this.state.dir;
+
+    return React.createElement(Atticus, props);
   }
 }
 

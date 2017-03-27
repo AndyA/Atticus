@@ -14,27 +14,6 @@ body {
   }
 }
 
-@state-accepted-text: #0f0;
-@state-rejected-text: #f00;
-@state-pending-text: #ff0;
-@state-review-text: #00f;
-@state-all-text: #f0f;
-
-.state-color(@state) {
-  @var-name: "state-@{state}-text";
-  &.@{state} { color: darken(@@var-name, 20%); }
-  .active &.@{state} { color: lighten(@@var-name, 40%); }
-}
-
-.state-icon {
-  padding-right: 1em;
-  .state-color(accepted);
-  .state-color(rejected);
-  .state-color(pending);
-  .state-color(review);
-  .state-color(all);
-}
-
 #wrapper {
   position: relative;
 }
