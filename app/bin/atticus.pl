@@ -52,10 +52,7 @@ for my $root (@ARGV) {
 
 sub scan {
   my $root = shift;
-  if ( -f $root ) {
-    update_file( file($root)->absolute );
-    return;
-  }
+  die "Can't scan a file" if -f $root;
   my @queue = ($root);
   while (@queue) {
     my $next = pop @queue;
@@ -118,8 +115,7 @@ sub update_list {
 
   while (@obj) {
     my @work = splice @obj, 0, CHUNK;
-    my $info = mediainfo( map { $_->{obj} } @work );
-    my $data = parse_mi($info);
+    my $data = parse_mi( mediainfo( map { $_->{obj} } @work ) );
     for my $obj (@work) {
       my $mi = $data->{ $obj->{obj} } // {};
       my $exif = get_exif( $obj->{obj} );
@@ -134,6 +130,7 @@ sub update_list {
       my $store_uri = store_uri( $obj->{_id} );
 
       say "Updating $store_uri";
+
       #      say JSON->new->utf8->pretty->canonical->encode($rec);
       my $req = HTTP::Request->new(
         PUT => $store_uri,
@@ -240,6 +237,7 @@ sub parse_mi {
     }
 
     my $gen = delete $stash->{general};
+
     # next unless keys %$stash;
 
     $stash->{general} = $gen->[0];
