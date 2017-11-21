@@ -36,8 +36,8 @@ export default class JSONComponent extends React.Component {
     progress.start();
     fetchJSON(uri).then(json => {
       console.log(json);
-      this.setData(json);
       progress.stop();
+      this.setData(json);
     });
   }
 }

@@ -44,28 +44,32 @@ class Atticus extends React.Component {
 
     if (pe.length === 0) {
       return (
-        <li className="breadcrumb-item"><i className="fa fa-home"></i></li>
+        <li key="home" className="breadcrumb-item">
+          <i className="fa fa-home"></i>
+        </li>
       );
     }
 
     var out = [];
 
     out.unshift(
-      <li className="breadcrumb-item">{pe.pop()}</li>
+      <li key="leaf" className="breadcrumb-item">{pe.pop()}</li>
     );
 
     while (pe.length) {
       var link = "/atticus/" + pe.join("/");
       out.unshift(
-        <li className="breadcrumb-item">
+        <li key={link} className="breadcrumb-item">
           <NavLink to={link}>{pe.pop()}</NavLink>
         </li>
       );
     }
 
     out.unshift(
-      <li className="breadcrumb-item">
-        <NavLink to="/atticus/"><i className="fa fa-home"></i></NavLink>
+      <li key="home" className="breadcrumb-item">
+        <NavLink to="/atticus/">
+          <i className="fa fa-home"></i>
+        </NavLink>
       </li>
     );
 
@@ -75,7 +79,7 @@ class Atticus extends React.Component {
   getBody() {
     var links = [];
 
-    if (this.props.dir) {
+    if (this.props.dir && this.props.dir.children) {
       for (var obj of this.props.dir.children) {
         var uri = atticusURI(obj._id);
         if (uri === null)
