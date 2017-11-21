@@ -89,7 +89,7 @@ sub _get_loc {
    if exists $info->{GPSPosition};
 
   return [$info->{GPSLatitude}, $info->{GPSLongitude}]
-   if exists $info->{GPSLatitude} && exist $info->{GPSLongitude};
+   if exists $info->{GPSLatitude} && exists $info->{GPSLongitude};
 
   return;
 }
